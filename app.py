@@ -23,8 +23,8 @@ def trigger_gitlab_review():
 
     try:
         # Trigger the review process
-        review_merge_request(ci_project_id, ci_merge_request_iid)
-        return jsonify({"success": f"Review triggered for {ci_project_id}, PR #{ci_merge_request_iid}"}), 200
+        comments = review_merge_request(ci_project_id, ci_merge_request_iid)
+        return jsonify({"success": f"Review triggered for {ci_project_id}, PR #{ci_merge_request_iid}", "comments": comments }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -38,10 +38,12 @@ def trigger_github_review():
     
     try:
         # Trigger the review process
-        review_pull_request(repo_name, int(pull_number))
-        return jsonify({"success": f"Review triggered for {repo_name}, PR #{pull_number}"}), 200
+        comments = review_pull_request(repo_name, int(pull_number))
+
+        return jsonify({"success": f"Review triggered for {repo_name}, PR #{pull_number}", "comments": comments }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5173, debug=True)
+    port = int(os.getenv("PORT", 5173))  # Use the PORT environment variable or default to 5000
+    app.run(host="0.0.0.0", port=port)

@@ -52,9 +52,9 @@ def generate_comments_with_chatgpt(merge_request_details):
     prompt = f"""
     You are a tech lead. Based on the following changes, generate code review comments.
     Do not add title to the comments.
+    Add [via ChatGPT review bot] on top of comment.
     Include suggested change for code, in the form of markdown, inside the comment.
     Include links for reference inside the comment.
-    Add [via ChatGPT review bot] on top of comment.
     Use markdown format for the comment body.
     Include the JSON only in the response.
     Format: [{{"file": "filename", "line": line_number, "comment": "comment"}}]
@@ -65,7 +65,7 @@ def generate_comments_with_chatgpt(merge_request_details):
 
 
     response = openai.ChatCompletion.create(
-        model="gpt-4o",
+        model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a professional code reviewer."},
             {"role": "user", "content": prompt}
@@ -77,15 +77,15 @@ def generate_comments_with_chatgpt(merge_request_details):
     # Remove Markdown formatting (triple backticks)
     cleaned_content = content.strip()[7:-3].strip()
 
-    print("Cleaned API Response Content:", cleaned_content)  # Debugging log
     # Parse the JSON content safely
     try:
         comments = json.loads(cleaned_content)
+        return comments
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON response: {e}")
-        comments = []
+        return []
 
-    return comments
+    
 
 def submit_to_gitlab(comments, api_url, access_token, merge_request_details):
     headers = {
@@ -115,6 +115,8 @@ def submit_to_gitlab(comments, api_url, access_token, merge_request_details):
             print(f"Submitted comment on {comment['file']} line {comment['line']}")
         except json.JSONDecodeError as e:
             print(f"{response.status_code}")
+    
+    return comments
 
 
 def review_merge_request(ci_project_id, ci_merge_request_iid):
@@ -131,4 +133,8 @@ def review_merge_request(ci_project_id, ci_merge_request_iid):
         
         # Submit comments to GitLab
         submit_to_gitlab(comments, gitlab_comment_api_url, gitlab_access_token, merge_request_details)
+
+        return comments
+    
+    return []
     

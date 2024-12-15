@@ -29,43 +29,52 @@
     </form>
 
 
-
-    <div id="response"></div>
+    <br />
+    <br />
+    <div id="comments"><h3>Comments will show here</h3></div>
 
     <script>
-        document.getElementById('gitlab-review-form').addEventListener('submit', async (event) => {
+        async function handleFormSubmit(event, url) {
             event.preventDefault();
-            
+
+            const commentsDiv = document.getElementById('comments');
+            commentsDiv.innerHTML = '<h3>Fetching comments...</h3>';
+
             const formData = new FormData(event.target);
-            const response = await fetch('/trigger-gitlab-review', {
+            const response = await fetch(url, {
                 method: 'POST',
                 body: formData,
             });
 
             const result = await response.json();
-            const responseDiv = document.getElementById('response');
-            if (response.error) {
-                responseDiv.innerText = `Error: ${result.error}`;
+
+            commentsDiv.innerHTML = ''; // Clear previous comments
+
+            if (result.error) {
+                commentsDiv.innerHTML = '<h3>Error fetching comments</h3>';
             } else {
-                responseDiv.innerText = `Success: ${result.success}`;
+                // Display comments
+                if (result.comments && result.comments.length > 0) {
+                    const commentsHTML = result.comments.map(comment => `
+                        <div class="comment">
+                            <strong>File:</strong> ${comment.file}<br>
+                            <strong>Line:</strong> ${comment.line}<br>
+                            <strong>Comment:</strong> ${comment.comment}<br><br>
+                        </div>
+                    `).join('');
+                    commentsDiv.innerHTML = `<h3>Generated Comments:</h3>${commentsHTML}`;
+                } else {
+                    commentsDiv.innerHTML = '<h3>No comments were generated.</h3>';
+                }
             }
+        }
+
+        document.getElementById('gitlab-review-form').addEventListener('submit', (event) => {
+            handleFormSubmit(event, '/trigger-gitlab-review');
         });
-        document.getElementById('github-review-form').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            
-            const formData = new FormData(event.target);
-            const response = await fetch('/trigger-github-review', {
-                method: 'POST',
-                body: formData,
-            });
 
-            const result = await response.json();
-            const responseDiv = document.getElementById('response');
-            if (response.error) {
-                responseDiv.innerText = `Error: ${result.error}`;
-            } else {
-                responseDiv.innerText = `Success: ${result.success}`;
-            }
+        document.getElementById('github-review-form').addEventListener('submit', (event) => {
+            handleFormSubmit(event, '/trigger-github-review');
         });
     </script>
 </body>

@@ -9,8 +9,8 @@ def fetch_pull_request_changes(repo_name, pull_number, access_token):
     }
     api_url = f"https://api.github.com/repos/{repo_name}/pulls/{pull_number}/files"
     response = requests.get(api_url, headers=headers)
-    
-    print(api_url)
+
+    print(api_url)    
     if response.status_code == 200:
         return response.json()
     else:
@@ -34,9 +34,9 @@ def generate_comments_with_chatgpt(files_changed):
     prompt = f"""
     You are a tech lead. Based on the following changes, generate code review comments.
     Do not add title to the comments.
+    Add [via ChatGPT review bot] on top of comment.
     Include suggested change for code, in the form of markdown, inside the comment.
     Include links for reference inside the comment.
-    Add [via ChatGPT review bot] on top of the comment.
     Use markdown format for the comment body.
     Include the JSON only in the response.
     Format: [{{"file": "filename", "line": line_number, "comment": "comment"}}]
@@ -46,7 +46,7 @@ def generate_comments_with_chatgpt(files_changed):
     """
 
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a professional code reviewer."},
             {"role": "user", "content": prompt}
@@ -55,14 +55,18 @@ def generate_comments_with_chatgpt(files_changed):
 
     content = response["choices"][0]["message"]["content"]
 
+    # Remove Markdown formatting (triple backticks)
+    cleaned_content = content.strip()[7:-3].strip()
+
     # Parse JSON response
     try:
-        comments = json.loads(content.strip())
+        comments = json.loads(cleaned_content.strip())
+        return comments
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON response: {e}")
-        comments = []
+        return []
 
-    return comments
+  
 
 def submit_comments_to_github(comments, repo_name, pull_number, access_token):
     headers = {
@@ -98,6 +102,8 @@ def submit_comments_to_github(comments, repo_name, pull_number, access_token):
             print(f"Submitted comment on {comment['file']} line {comment['line']}")
         else:
             print(f"Error submitting comment: {response.status_code}, {response.text}")
+    
+    return comments
 
 
 def review_pull_request(repo_name, pull_number):
@@ -105,10 +111,14 @@ def review_pull_request(repo_name, pull_number):
 
     # Fetch pull request changes
     files_changed = fetch_pull_request_changes(repo_name, pull_number, github_access_token)
-    
+
     if files_changed:
         # Generate comments using ChatGPT
         comments = generate_comments_with_chatgpt(files_changed)
 
         # Submit comments to GitHub
         submit_comments_to_github(comments, repo_name, pull_number, github_access_token)
+
+        return comments
+    
+    return []
