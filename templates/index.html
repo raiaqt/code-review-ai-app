@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Review Bot</title>
+</head>
+<body>
+    <h1>Gitlab Merge Request Reviewer</h1>
+    <form id="gitlab-review-form" method="POST" action="/trigger-gitlab-review">
+        <label for="CI_PROJECT_ID">CI_PROJECT_ID:</label>
+        <input type="text" id="CI_PROJECT_ID" name="CI_PROJECT_ID" required><br><br>
+        
+        <label for="CI_MERGE_REQUEST_IID">CI_MERGE_REQUEST_IID:</label>
+        <input type="text" id="CI_MERGE_REQUEST_IID" name="CI_MERGE_REQUEST_IID" required><br><br>
+        
+        <button type="submit">Trigger Review</button>
+    </form>
+
+    <h1>GitHub Pull Request Reviewer</h1>
+    <form id="github-review-form" method="POST" action="/trigger-github-review">
+        <label for="REPO_NAME">Repository Name (owner/repo):</label>
+        <input type="text" id="REPO_NAME" name="REPO_NAME" placeholder="e.g., octocat/Hello-World" required><br><br>
+        
+        <label for="PULL_NUMBER">Pull Request Number:</label>
+        <input type="number" id="PULL_NUMBER" name="PULL_NUMBER" placeholder="e.g., 42" required><br><br>
+        
+        <button type="submit">Trigger Review</button>
+    </form>
+
+
+
+    <div id="response"></div>
+
+    <script>
+        document.getElementById('gitlab-review-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const response = await fetch('/trigger-gitlab-review', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+            const responseDiv = document.getElementById('response');
+            if (response.error) {
+                responseDiv.innerText = `Error: ${result.error}`;
+            } else {
+                responseDiv.innerText = `Success: ${result.success}`;
+            }
+        });
+        document.getElementById('github-review-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const response = await fetch('/trigger-github-review', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+            const responseDiv = document.getElementById('response');
+            if (response.error) {
+                responseDiv.innerText = `Error: ${result.error}`;
+            } else {
+                responseDiv.innerText = `Success: ${result.success}`;
+            }
+        });
+    </script>
+</body>
+</html>

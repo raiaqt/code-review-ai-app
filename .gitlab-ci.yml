@@ -1,0 +1,13 @@
+stages:
+  - review
+
+review:
+  stage: review
+  image: python:3.9
+  before_script:
+    - pip install requests openai==0.28
+  script:
+    - python review_script.py
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
