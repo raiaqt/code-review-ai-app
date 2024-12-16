@@ -38,7 +38,7 @@
             event.preventDefault();
 
             const commentsDiv = document.getElementById('comments');
-            commentsDiv.innerHTML = '<h3>Fetching comments...</h3>';
+            commentsDiv.innerHTML = 'Fetching comments...';
 
             const formData = new FormData(event.target);
             const response = await fetch(url, {
@@ -51,7 +51,7 @@
             commentsDiv.innerHTML = ''; // Clear previous comments
 
             if (result.error) {
-                commentsDiv.innerHTML = '<h3>Error fetching comments</h3>';
+                commentsDiv.innerHTML = 'Error fetching comments';
             } else {
                 // Display comments
                 if (result.comments && result.comments.length > 0) {
