@@ -1,6 +1,9 @@
 import os
 import requests
 import json
+import base64
+
+from generate_comments import generate_comments_with_chatgpt
 
 def fetch_pull_request_changes(repo_name, pull_number, access_token):
     headers = {
@@ -17,56 +20,59 @@ def fetch_pull_request_changes(repo_name, pull_number, access_token):
         print(f"Error fetching pull request: {response.status_code}, {response.text}")
         return None
 
-def generate_comments_with_chatgpt(files_changed):
-    import openai
+def get_file_content(file_api_url, sha, access_token):
 
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+    }
 
-    # Format changes for ChatGPT
-    formatted_changes = [
-        {
-            "file": file["filename"],
-            "diff": file.get("patch", "No diff available")
-        }
-        for file in files_changed
-    ]
+    try:
+        print(f"Fetching content")
+        url = f"{file_api_url}/{sha}"
+        print(url)
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            file_info = response.json()
+            # Decode Base64 content
+            base64_content = file_info.get("content", "").replace("\n", "")
+            try:
+                content = base64.b64decode(base64_content).decode("utf-8")
+            except Exception as e:
+                raise ValueError(f"Error decoding Base64 content: {e}")
 
-    prompt = f"""
-    You are a tech lead. Based on the following changes, generate code review comments.
-    Do not add title to the comments.
-    Add [via ChatGPT review bot] on top of comment.
-    Include suggested change for code, in the form of markdown, inside the comment.
-    Include links for reference inside the comment.
-    Use markdown format for the comment body.
-    Include the JSON only in the response.
-    Format: [{{"file": "filename", "line": line_number, "comment": "comment"}}]
+            print(f"Content fetched")
+            return content
+        else:
+            print(f"Error: {response.status_code} - {response.text}")
+            return None
+    except json.JSONDecodeError as e:
+        print(f"Error fetching file: {e}")
+        return []
     
-    Changes:
-    {formatted_changes}
+def format_changes(files_changed, file_api_url, access_token):
+    """
+    Formats the changes from a GitHub Pull Request.
     """
 
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a professional code reviewer."},
-            {"role": "user", "content": prompt}
-        ]
-    )
-
-    content = response["choices"][0]["message"]["content"]
-
-    # Remove Markdown formatting (triple backticks)
-    cleaned_content = content.strip()[7:-3].strip()
-
-    # Parse JSON response
     try:
-        comments = json.loads(cleaned_content.strip())
-        return comments
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON response: {e}")
-        return []
+        formatted_changes = []
 
-  
+        for file in files_changed:
+            # sha = file.get("sha")
+            # contents_url = file.get("contents_url")
+            # file_content = get_file_content(file_api_url, sha, access_token)
+
+            formatted_changes.append({
+                "file": file["filename"],
+                "diff": file.get("patch", "No diff available"),
+                # "file_content": file_content
+            })
+
+        print(f"Changes formatted successfully.")
+        return formatted_changes
+    except Exception as e:
+        print(f"Error formatting changes: {e}")
+        return []
 
 def submit_comments_to_github(comments, repo_name, pull_number, access_token):
     headers = {
@@ -108,13 +114,15 @@ def submit_comments_to_github(comments, repo_name, pull_number, access_token):
 
 def review_pull_request(repo_name, pull_number):
     github_access_token = os.getenv("GITHUB_ACCESS_TOKEN")
+    file_api_url = f"https://api.github.com/repos/{repo_name}/git/blobs"
 
     # Fetch pull request changes
     files_changed = fetch_pull_request_changes(repo_name, pull_number, github_access_token)
+    formatted_changes = format_changes(files_changed, file_api_url, github_access_token)
 
     if files_changed:
         # Generate comments using ChatGPT
-        comments = generate_comments_with_chatgpt(files_changed)
+        comments = generate_comments_with_chatgpt(formatted_changes)
 
         # Submit comments to GitHub
         submit_comments_to_github(comments, repo_name, pull_number, github_access_token)
