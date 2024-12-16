@@ -9,7 +9,7 @@ def generate_comments_with_chatgpt(formatted_changes):
 
     prompt = f"""
     You are a senior tech lead with expertise in reviewing code for quality, performance, and maintainability.
-    Based on the following changes, generate **focused, high-value, and actionable code review comments** for each diff, use the context provided.
+    Based on the following changes, generate **focused, high-value, and actionable code change suggestion** for each diff, use the context provided.
     Your review should prioritize impactful changes that improve the overall quality of the code.
 
     ### **Review Guidelines**:
@@ -32,6 +32,7 @@ def generate_comments_with_chatgpt(formatted_changes):
     ### **Output Requirements**:
     - Respond **only** with JSON.
     - JSON format: `[{{"file": "filename", "line": line_number, "comment": "comment"}}]`
+    - Ensure that the file and line are correct.
     - Each comment should:
     - Be specific to the context of the change.
     - Include a suggested code change formatted in markdown.
